@@ -54,15 +54,16 @@ head = f'''<!doctype html>
 <meta name="apple-mobile-web-app-title" content="JIKKO">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 {''.join(links)}<style>
 :root{{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}}
-html,body{{margin:0}} body{{font:14px system-ui,sans-serif}} img{{max-width:100%}} [hidden]{{display:none!important}}
+html,body{{margin:0}} body{{font:15px 'DM Sans',system-ui,sans-serif}} img{{max-width:100%}} [hidden]{{display:none!important}}
 #jk-login{{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;background:rgba(231,231,234,.92);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}}
-.jkl{{width:100%;max-width:380px;background:#fff;border-radius:24px;padding:28px 24px;box-shadow:0 30px 70px -20px rgba(20,20,30,.3);display:flex;flex-direction:column;gap:12px;font-family:Inter,system-ui,sans-serif}}
-.jkl img{{width:90px;align-self:center}} .jkl h2{{margin:4px 0 0;text-align:center;font-family:'Instrument Sans',Inter,sans-serif;font-weight:500;font-size:22px}}
+.jkl{{width:100%;max-width:380px;background:#fff;border-radius:24px;padding:28px 24px;box-shadow:0 30px 70px -20px rgba(20,20,30,.3);display:flex;flex-direction:column;gap:12px;font-family:'DM Sans',system-ui,sans-serif}}
+.jkl img{{width:90px;align-self:center}} .jkl h2{{margin:4px 0 0;text-align:center;font-family:'DM Sans',system-ui,sans-serif;font-weight:600;font-size:22px}}
 .jkl p{{margin:0;text-align:center;color:#5d5d64;font-size:14px}} .jkl .jkl-err{{color:#e2453c}}
-.jkl label{{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#5d5d64}}
+.jkl label{{display:flex;flex-direction:column;gap:6px;font-size:14px;color:#5d5d64}}
 .jkl input{{border:1px solid rgba(19,19,22,.14);border-radius:12px;padding:12px;font-size:15px}}
 .jkl button{{margin-top:6px;border:0;border-radius:999px;background:#131316;color:#fff;padding:13px;font-size:15px;font-weight:600}}
 </style>
