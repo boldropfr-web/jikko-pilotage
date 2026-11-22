@@ -23,19 +23,22 @@ body = rep(body, "  function shopSync(cb){\n    var fin=function(){ if(cb) cb();
     var fin=function(){ if(cb) cb(); };
     if(window.JK_STANDALONE){
       if(ro()){ fin(); return; }
-      var R0=curRange(), t0=ymd(new Date()), b0=$('rp-shop'); b0.disabled=true; $('rp-shop-t').textContent='Lecture Shopify…';
-      JK_call('syncShopify',{from:R0[0],to:(R0[1]>t0?t0:R0[1])}).then(function(j){ return JK_refresh().then(function(){ toast((j.days||0)+' jours Shopify à jour'); }); })
-        .catch(function(e){ toast(e.message||'Synchro Shopify impossible'); }).then(function(){ b0.disabled=false; $('rp-shop-t').textContent='Synchro Shopify'; fin(); });
+      var R0=curRange(), t0=ymd(new Date());
+      JK_requestSync('shopify',{from:R0[0],to:(R0[1]>t0?t0:R0[1])}).then(fin,fin);
       return;
     }""")
 # --- Klaviyo
 body = rep(body, "    if(!mcpReady){ toast('Connexion Klaviyo indisponible ici'); return; }",
-"""    if(window.JK_STANDALONE){ klSetBusy('Synchro Klaviyo…'); JK_call('syncKlaviyo').then(function(j){ return JK_refresh().then(function(){ toast((j.campaigns||0)+' campagnes à jour'); }); }).catch(function(e){ toast(e.message||'Synchro Klaviyo impossible'); }).then(function(){ klSetBusy(null); }); return; }
+"""    if(window.JK_STANDALONE){ JK_requestSync('klaviyo',{}); return; }
     if(!mcpReady){ toast('Connexion Klaviyo indisponible ici'); return; }""")
+# --- toast accessible à l'adaptateur
+body = rep(body, "  function toast(t){ var el=$('toast');", "  window.toast=function(t){ toast(t); };\n  function toast(t){ var el=$('toast');")
+# --- résultats Intelligems : demande à Claude
+body = rep(body, "  function igSync(id,quiet){\n", "  function igSync(id,quiet){\n    if(window.JK_STANDALONE){ if(!quiet) JK_requestSync('intelligems',{testId:id}); return Promise.resolve(); }\n")
 # --- Intelligems : pas d'API dans l'app autonome
-body = rep(body, "  function igLoad(force){\n", "  function igLoad(force){\n    if(window.JK_STANDALONE){ ig.state='nomcp'; igRender(); return; }\n")
+body = rep(body, "  function igLoad(force){\n", "  function igLoad(force){\n    if(window.JK_STANDALONE){ var st=(window.JK_store&&JK_store('meta','igList'))||null; if(st&&st.list){ ig.list=st.list; ig.state='ok'; } else ig.state='nomcp'; igRender(); return; }\n")
 body = rep(body, "Elle marche quand l\\'outil est ouvert sur claude.ai avec le connecteur Intelligems.",
-               "Dans l\\'app autonome, relie un test avec le champ « Test Intelligems » de sa fiche, ou demande à Claude de le synchroniser.")
+               "Claude synchronise les tests Intelligems reliés chaque matin. Pour en relier un, utilise le champ « Test Intelligems » de sa fiche.")
 body = body.replace("Aperçu : la sauvegarde partagée s\\'active sur la page publiée.", "Connecte l\\'app à ton Google Sheet pour charger les données.")
 
 head = f'''<!doctype html>

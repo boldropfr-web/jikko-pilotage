@@ -5,9 +5,11 @@ Les données sont stockées dans un Google Sheet, l'app est hébergée sur GitHu
 
 ## Comment ça marche
 
-- **Le Google Sheet** est la base de données : un onglet par type de données (`scales`, `abtests`, `actions`, `mails`, `sales`, `adspend`…), une ligne par élément.
-- **Le script Google** (`apps-script/Code.gs`), collé dans le Sheet, sert d'API à l'app, protégée par un code secret. Il synchronise aussi Shopify et Klaviyo chaque nuit à 5 h (heure de Los Angeles).
-- **L'app** (`index.html`) lit et écrit dans le Sheet à travers ce script. Aucune donnée ni clé n'est dans ce dépôt.
+- **Le Google Sheet** est la base de données : un onglet par type de données (`scales`, `abtests`, `actions`, `mails`, `sales`, `adspend`, `meta`…), une ligne par élément.
+- **Le script Google** (`apps-script/Code.gs`), collé dans le Sheet, sert d'API à l'app, protégée par un code secret. Il ne se connecte à aucun service extérieur.
+- **Claude fait les synchros** Shopify, Klaviyo et Intelligems avec les connecteurs du compte Claude, via une tâche planifiée chaque matin, et écrit dans le Sheet à travers le script. Aucune clé d'API n'est nécessaire.
+- **L'app** (`index.html`) lit et écrit dans le Sheet. Les boutons « Synchro » de l'app déposent une demande que Claude traite au passage suivant. Le pied de page indique la date de la dernière synchro.
+- Aucune donnée ni code secret n'est dans ce dépôt.
 
 ## Installation (une seule fois)
 
@@ -22,22 +24,11 @@ Les données sont stockées dans un Google Sheet, l'app est hébergée sur GitHu
 2. Exécuter en tant que : **Moi**. Qui a accès : **Tout le monde**.
 3. **Déployer**, puis copie l'**URL de l'application Web** (elle finit par `/exec`).
 
-### 3. Ajouter les clés (Paramètres du projet → Propriétés du script)
-| Propriété | Valeur |
-|---|---|
-| `SHOPIFY_STORE` | déjà rempli : `fqfk1v-jb.myshopify.com` |
-| `SHOPIFY_CLIENT_ID` et `SHOPIFY_CLIENT_SECRET` | Voir « Créer l'app Shopify » ci-dessous |
-| `KLAVIYO_KEY` | Klaviyo → Paramètres → Clés API → Créer une clé privée → **lecture seule** sur Campagnes et Métriques |
-
-### Créer l'app Shopify (Dev Dashboard)
-Depuis janvier 2026, Shopify ne crée plus d'apps avec un jeton fixe dans l'admin. On passe par le Dev Dashboard, et le script demande lui-même un jeton valable 24 h.
-1. Va sur **dev.shopify.com** avec le compte propriétaire de la boutique → **Apps → Créer une app** → nom : « JIKKO Pilotage ».
-2. Dans la version de l'app, mets les accès (scopes) **`read_orders`, `read_products`, `read_inventory`**, puis **publie la version** (Release).
-3. **Installe l'app** sur la boutique JIKKO (bouton Installer / Install app).
-4. Dans **Paramètres** de l'app, copie le **Client ID** et le **Client secret** dans les propriétés du script.
+### 3. Donner l'accès à Claude
+Envoie l'URL `/exec` et le code secret à Claude : il transfère les données existantes dans le Sheet et programme la synchro du matin.
 
 ### 4. Ouvrir l'app
-1. Va sur l'adresse GitHub Pages du dépôt.
+1. Va sur https://boldropfr-web.github.io/jikko-pilotage/
 2. Colle l'URL du script et le code secret → **Se connecter**.
 3. Sur iPhone : **Safari → Partager → Sur l'écran d'accueil**. L'app s'ouvre en plein écran avec l'icône JIKKO.
 
@@ -45,7 +36,5 @@ Depuis janvier 2026, Shopify ne crée plus d'apps avec un jeton fixe dans l'admi
 Après une modification de `Code.gs` : **Déployer → Gérer les déploiements → crayon → Version : Nouvelle version → Déployer**. L'URL ne change pas.
 
 ## Notes
-- Les ventes Shopify sont calculées à partir des commandes : de petits écarts avec les rapports Shopify Analytics sont possibles (remboursements, fuseau horaire).
-- Le COGS est lu dans Shopify (coût par article) dès qu'il est renseigné.
-- Intelligems n'a pas de synchro automatique dans l'app autonome : relie un test avec le champ « Test Intelligems » de sa fiche.
+- Le COGS vient de Shopify (coût par article) dès qu'il est renseigné.
 - `build/build.py` reconstruit `index.html` à partir de la page de l'outil ; `build/mock_server.py` sert l'app en local avec un faux script pour les tests.

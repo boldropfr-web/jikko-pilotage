@@ -21,10 +21,21 @@
   function load() {
     if (!api || !secret) return Promise.resolve();
     if (pending > 0) return Promise.resolve();
-    return call('all').then(function (j) { store = j.collections || {}; Object.keys(L).forEach(fire); })
+    return call('all').then(function (j) { store = j.collections || {}; Object.keys(L).forEach(fire); setTimeout(showSync, 50); })
       .catch(function (e) { console.warn(e); if (/secret|APP_SECRET/i.test(e.message)) showLogin(e.message); });
   }
   window.JK_refresh = load;
+  window.JK_store = function (c, id) { var arr = (store && store[c]) || []; for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i].data; return null; };
+  function ago(ts) { var m = Math.round((Date.now() - ts) / 60000); return m < 60 ? 'il y a ' + Math.max(1, m) + ' min' : m < 1440 ? 'il y a ' + Math.round(m / 60) + ' h' : 'le ' + new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }); }
+  function showSync() { var f = document.getElementById('foot'); var m = window.JK_store('meta', 'lastSync'), r = window.JK_store('meta', 'syncRequest'); if (!f) return;
+    var t = m && m.at ? 'Dernière synchro par Claude ' + ago(m.at) + '.' : 'Pas encore de synchro par Claude.';
+    if (r && r.at && (!m || !m.at || r.at > m.at)) t += ' Demande en attente (' + (r.source || 'tout') + ').';
+    f.textContent = t; }
+  window.JK_requestSync = function (source, extra) {
+    var d = Object.assign({ source: source, at: Date.now() }, extra || {});
+    return col('meta').doc('syncRequest').set(d).then(function () { showSync(); if (window.toast) window.toast('Demande envoyée : Claude synchronise au prochain passage'); else alert('Demande envoyée à Claude'); })
+      .catch(function (e) { if (window.toast) window.toast(e.message || 'Demande impossible'); });
+  };
   function local(n, id, d, merge) { store = store || {}; var arr = store[n] = store[n] || []; var ex = null; arr.forEach(function (x) { if (x.id === id) ex = x; }); if (ex) ex.data = merge ? Object.assign({}, ex.data, d) : d; else arr.push({ id: id, data: d }); fire(n); }
   function localDel(n, id) { if (!store || !store[n]) return; store[n] = store[n].filter(function (x) { return x.id !== id; }); fire(n); }
   function rid() { return Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-6); }

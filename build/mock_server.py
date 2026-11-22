@@ -21,7 +21,6 @@ class H(http.server.SimpleHTTPRequestHandler):
                 if ex: ex['data'] = {**ex['data'], **body['data']} if op == 'update' else body['data']
                 else: arr.append({'id': body['id'], 'data': body['data']})
             elif op == 'delete': DATA[c] = [x for x in DATA.get(c, []) if x['id'] != body['id']]
-            elif op in ('syncShopify', 'syncKlaviyo'): out.update({'days': 0, 'campaigns': 0})
         b = json.dumps(out).encode()
         self.send_response(200); self.send_header('Content-Type', 'application/json'); self.send_header('Content-Length', str(len(b))); self.end_headers(); self.wfile.write(b)
     def log_message(self, *a): pass

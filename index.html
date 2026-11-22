@@ -1033,6 +1033,7 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
   function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function statusPill(st){ var m={todo:['p-todo','À prévoir'],doing:['p-doing','En cours'],done:['p-done','Terminé']}; var x=m[st]||m.todo; return '<span class="pill '+x[0]+'">'+x[1]+'</span>'; }
   function letter(i){ return String.fromCharCode(65+i); }
+  window.toast=function(t){ toast(t); };
   function toast(t){ var el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toast._t); toast._t=setTimeout(function(){ el.classList.remove('show'); },1800); }
   function ro(){ return canWrite===false; }
   function rowActs(k,id){ return ro()?'':'<div class="acts"><button class="ib" type="button" data-k="'+k+'-edit" data-id="'+esc(id)+'" aria-label="Modifier">'+IC.edit+'</button><button class="ib" type="button" data-k="'+k+'-del" data-id="'+esc(id)+'" aria-label="Supprimer">'+IC.del+'</button></div>'; }
@@ -1323,7 +1324,7 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
   }
   function igPayload(res){ var p=res&&res.payload; if(typeof p==='string'){ try{ p=JSON.parse(p); }catch(e){} } return p; }
   function igLoad(force){
-    if(window.JK_STANDALONE){ ig.state='nomcp'; igRender(); return; }
+    if(window.JK_STANDALONE){ var st=(window.JK_store&&JK_store('meta','igList'))||null; if(st&&st.list){ ig.list=st.list; ig.state='ok'; } else ig.state='nomcp'; igRender(); return; }
     if(!mcpReady){ ig.state='nomcp'; igRender(); return; }
     if(ig.state==='loading') return;
     ig.state='loading'; ig.err=null; igRender();
@@ -1342,7 +1343,7 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
   function igRender(){
     var host=$('ig-body'); if(!host) return;
     var rb=$('ig-refresh'); if(rb){ rb.disabled=(ig.state==='loading'||ig.state==='nomcp'); rb.textContent=ig.state==='loading'?'…':'Actualiser'; }
-    if(ig.state==='nomcp'){ host.innerHTML='<div class="ig-msg"><span><b>La connexion Intelligems n\'est pas disponible ici.</b> Dans l\'app autonome, relie un test avec le champ « Test Intelligems » de sa fiche, ou demande à Claude de le synchroniser.</span></div>'; return; }
+    if(ig.state==='nomcp'){ host.innerHTML='<div class="ig-msg"><span><b>La connexion Intelligems n\'est pas disponible ici.</b> Claude synchronise les tests Intelligems reliés chaque matin. Pour en relier un, utilise le champ « Test Intelligems » de sa fiche.</span></div>'; return; }
     if($('sh-ig').hidden) return;
     if(ig.state==='idle'){ host.innerHTML='<div class="ig-msg"><span><b>Relie tes tests Intelligems.</b> Importe un test en un clic et récupère ses résultats sans les recopier.</span><button class="lbtn dark" type="button" data-k="ig-connect">Connecter</button></div>'; return; }
     if(ig.state==='loading'&&!ig.list.length){ host.innerHTML='<div class="ig-list">'+[1,2].map(function(){ return '<div class="ig-row"><div class="row-main"><div class="skel" style="width:46%"></div><div class="skel" style="width:28%;margin-top:10px;height:10px"></div></div></div>'; }).join('')+'</div>'; return; }
@@ -1386,6 +1387,7 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
   }
   function igNum(v){ var n=parseFloat(String(v||'').replace(/[^\d.\-]/g,'')); return isNaN(n)?null:n; }
   function igSync(id,quiet){
+    if(window.JK_STANDALONE){ if(!quiet) JK_requestSync('intelligems',{testId:id}); return Promise.resolve(); }
     var t=abtests.filter(function(x){return x.id===id;})[0]; if(!t||!t.igId||ro()) return Promise.resolve();
     if(!mcpReady){ toast('Connexion Intelligems indisponible ici'); return Promise.resolve(); }
     ig.busy[id]=true; renderAb();
@@ -1673,9 +1675,8 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
     var fin=function(){ if(cb) cb(); };
     if(window.JK_STANDALONE){
       if(ro()){ fin(); return; }
-      var R0=curRange(), t0=ymd(new Date()), b0=$('rp-shop'); b0.disabled=true; $('rp-shop-t').textContent='Lecture Shopify…';
-      JK_call('syncShopify',{from:R0[0],to:(R0[1]>t0?t0:R0[1])}).then(function(j){ return JK_refresh().then(function(){ toast((j.days||0)+' jours Shopify à jour'); }); })
-        .catch(function(e){ toast(e.message||'Synchro Shopify impossible'); }).then(function(){ b0.disabled=false; $('rp-shop-t').textContent='Synchro Shopify'; fin(); });
+      var R0=curRange(), t0=ymd(new Date());
+      JK_requestSync('shopify',{from:R0[0],to:(R0[1]>t0?t0:R0[1])}).then(fin,fin);
       return;
     }
     if(ro()){ fin(); return; } if(!mcpReady){ toast('Connexion Shopify indisponible ici'); fin(); return; }
@@ -1814,7 +1815,7 @@ h2{font-family:var(--display);font-size:22px;font-weight:500;letter-spacing:-.02
   function klSetBusy(t){ klBusy=!!t; var b=$('kl-sync'); if(b) b.disabled=klBusy; $('kl-sync-t').textContent=t||'Synchro Klaviyo'; }
   function klSync(){
     if(ro()||klBusy) return;
-    if(window.JK_STANDALONE){ klSetBusy('Synchro Klaviyo…'); JK_call('syncKlaviyo').then(function(j){ return JK_refresh().then(function(){ toast((j.campaigns||0)+' campagnes à jour'); }); }).catch(function(e){ toast(e.message||'Synchro Klaviyo impossible'); }).then(function(){ klSetBusy(null); }); return; }
+    if(window.JK_STANDALONE){ JK_requestSync('klaviyo',{}); return; }
     if(!mcpReady){ toast('Connexion Klaviyo indisponible ici'); return; }
     klSetBusy('Lecture des campagnes…');
     var camps=[], cutoff=Date.now()-365*864e5;
