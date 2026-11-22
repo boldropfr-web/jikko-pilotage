@@ -26,8 +26,15 @@ Les données sont stockées dans un Google Sheet, l'app est hébergée sur GitHu
 | Propriété | Valeur |
 |---|---|
 | `SHOPIFY_STORE` | déjà rempli : `fqfk1v-jb.myshopify.com` |
-| `SHOPIFY_TOKEN` | Shopify → Paramètres → Applications → Développer des applications → Créer une application → accès Admin API : `read_orders`, `read_products`, `read_inventory` → Installer → copier le jeton |
+| `SHOPIFY_CLIENT_ID` et `SHOPIFY_CLIENT_SECRET` | Voir « Créer l'app Shopify » ci-dessous |
 | `KLAVIYO_KEY` | Klaviyo → Paramètres → Clés API → Créer une clé privée → **lecture seule** sur Campagnes et Métriques |
+
+### Créer l'app Shopify (Dev Dashboard)
+Depuis janvier 2026, Shopify ne crée plus d'apps avec un jeton fixe dans l'admin. On passe par le Dev Dashboard, et le script demande lui-même un jeton valable 24 h.
+1. Va sur **dev.shopify.com** avec le compte propriétaire de la boutique → **Apps → Créer une app** → nom : « JIKKO Pilotage ».
+2. Dans la version de l'app, mets les accès (scopes) **`read_orders`, `read_products`, `read_inventory`**, puis **publie la version** (Release).
+3. **Installe l'app** sur la boutique JIKKO (bouton Installer / Install app).
+4. Dans **Paramètres** de l'app, copie le **Client ID** et le **Client secret** dans les propriétés du script.
 
 ### 4. Ouvrir l'app
 1. Va sur l'adresse GitHub Pages du dépôt.

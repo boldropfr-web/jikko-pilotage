@@ -8,7 +8,9 @@
  * Réglages (Paramètres du projet → Propriétés du script) :
  *   APP_SECRET      code secret de l'app (créé automatiquement par setup())
  *   SHOPIFY_STORE   ex : fqfk1v-jb.myshopify.com
- *   SHOPIFY_TOKEN   jeton Admin API d'une app personnalisée Shopify (read_orders, read_products, read_inventory)
+ *   SHOPIFY_CLIENT_ID      Client ID de l'app créée dans le Dev Dashboard Shopify (dev.shopify.com)
+ *   SHOPIFY_CLIENT_SECRET  Client secret de cette app (scopes : read_orders, read_products, read_inventory)
+ *   (ou SHOPIFY_TOKEN : ancien jeton shpat_ d'une app créée avant 2026, si tu en as un)
  *   KLAVIYO_KEY     clé API privée Klaviyo en lecture seule (campaigns:read, metrics:read)
  *
  * Chaque collection de l'app = un onglet : id | updatedAt | data (JSON).
@@ -121,8 +123,9 @@ function newId_() { return Utilities.getUuid().replace(/-/g, '').slice(0, 20); }
 
 /* ---------------- Shopify : ventes par jour ---------------- */
 function syncShopify_(from, to) {
-  var P = PropertiesService.getScriptProperties(), store = P.getProperty('SHOPIFY_STORE'), token = P.getProperty('SHOPIFY_TOKEN');
-  if (!store || !token) throw new Error('SHOPIFY_STORE ou SHOPIFY_TOKEN manquant dans les propriétés du script.');
+  var P = PropertiesService.getScriptProperties(), store = P.getProperty('SHOPIFY_STORE');
+  if (!store) throw new Error('SHOPIFY_STORE manquant dans les propriétés du script.');
+  var token = shopifyToken_(store);
   var today = Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd');
   from = from || today; to = to || today;
   var q = 'created_at:>=' + from + 'T00:00:00-08:00 created_at:<=' + to + 'T23:59:59-08:00 -test:true';
@@ -161,6 +164,23 @@ function syncShopify_(from, to) {
   });
   batch_(writes);
   return { days: writes.length };
+}
+/* Jeton Shopify : client credentials (apps du Dev Dashboard, jeton valable ~24 h, mis en cache) ou ancien jeton fixe */
+function shopifyToken_(store) {
+  var P = PropertiesService.getScriptProperties();
+  var fixed = P.getProperty('SHOPIFY_TOKEN'); if (fixed) return fixed;
+  var id = P.getProperty('SHOPIFY_CLIENT_ID'), secret = P.getProperty('SHOPIFY_CLIENT_SECRET');
+  if (!id || !secret) throw new Error('SHOPIFY_CLIENT_ID et SHOPIFY_CLIENT_SECRET manquants dans les propriétés du script.');
+  var cache = CacheService.getScriptCache(), hit = cache.get('shopify_token'); if (hit) return hit;
+  var r = UrlFetchApp.fetch('https://' + store + '/admin/oauth/access_token', {
+    method: 'post', muteHttpExceptions: true,
+    payload: { grant_type: 'client_credentials', client_id: id, client_secret: secret }
+  });
+  var j = {}; try { j = JSON.parse(r.getContentText() || '{}'); } catch (e) {}
+  if (r.getResponseCode() >= 300 || !j.access_token) throw new Error('Shopify refuse le jeton : ' + r.getContentText().slice(0, 200) + ' (vérifie que l\'app est installée sur la boutique)');
+  var ttl = Math.max(300, Math.min(21600, (j.expires_in || 86400) - 600));
+  cache.put('shopify_token', j.access_token, ttl);
+  return j.access_token;
 }
 function shopifyGql_(store, token, query, variables) {
   var r = UrlFetchApp.fetch('https://' + store + '/admin/api/2025-01/graphql.json', {
